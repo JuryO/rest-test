@@ -21,37 +21,22 @@ use Symfony\Component\HttpFoundation\Response;
 class PhotoController extends FOSRestController
 {
     /**
-     * Get list of photos with tags.
+     * Search photos by tag
+     * Route: /photos/search
+     * Method: GET
+     * Parameters: tag
      *
-     * @Rest\Get("/photos{trailingSlash}{page}", requirements={"trailingSlash" = "[/]{0,1}"}, defaults={"trailingSlash" = "/", "page" = 1})
-     */
-    public function getPhotosAction(Request $request)
-    {
-        $page = $request->get('page');
-        $perPage = $this->getParameter('photos_per_page');
-        $em = $this->getDoctrine()->getEntityManager();
-
-        // get a list of photos
-        $photos = $em->getRepository('AppBundle:Photo')->findBy(array(), array(), $perPage, ($page - 1) * $perPage);
-
-        //serialize and show results
-        $serializer = SerializerBuilder::create()->build();
-        $data = ['status' => 'success', 'photos' => $serializer->serialize($photos, 'json')];
-        $view = $this->view($data, Response::HTTP_OK);
-        return $view;
-    }
-
-    /**
-     * Search photos by tags.
-     *
-     * @Rest\Get("/photos/search/{tag}")
+     * @Rest\Get("/photos/search")
      */
     public function getPhotosByTagAction(Request $request)
     {
         $tag = $request->get('tag');
         $em = $this->getDoctrine()->getEntityManager();
+
+        // check if tag exists in db
         $dbTag = $em->getRepository('AppBundle:Tag')->findOneByName(trim($tag));
         if (!$dbTag) {
+            //show error if tag not exists
             $data = ['status' => 'error', 'message' => 'There is no such tag'];
             $view = $this->view($data, Response::HTTP_INTERNAL_SERVER_ERROR);
             return $view;
@@ -77,7 +62,33 @@ class PhotoController extends FOSRestController
     }
 
     /**
+     * Get list of photos with tags
+     * Route: /photos/{page}
+     * Method: GET
+     *
+     * @Rest\Get("/photos{trailingSlash}{page}", requirements={"trailingSlash" = "[/]{0,1}"}, defaults={"trailingSlash" = "/", "page" = 1})
+     */
+    public function getPhotosAction(Request $request)
+    {
+        $page = $request->get('page');
+        $perPage = $this->getParameter('photos_per_page');
+        $em = $this->getDoctrine()->getEntityManager();
+
+        // get a list of photos
+        $photos = $em->getRepository('AppBundle:Photo')->findBy(array(), array(), $perPage, ($page - 1) * $perPage);
+
+        //serialize and show results
+        $serializer = SerializerBuilder::create()->build();
+        $data = ['status' => 'success', 'photos' => $serializer->serialize($photos, 'json')];
+        $view = $this->view($data, Response::HTTP_OK);
+        return $view;
+    }
+
+    /**
      * Add new photo: HTTP POST request with jpg image in 'file' parameter
+     * Route: /photos
+     * Method: POST
+     * Parameter: file
      *
      * @Rest\Post("/photos")
      */
@@ -99,6 +110,8 @@ class PhotoController extends FOSRestController
 
     /**
      * Add tags to photo
+     * Route: /photos/{id}/tags
+     * Method: Post
      *
      * @Rest\Post("/photos/{photoId}/tags")
      */
@@ -110,6 +123,7 @@ class PhotoController extends FOSRestController
         if ($photoId) {
             $photo = $em->getRepository('AppBundle:Photo')->findOneById($photoId);
         }
+        // check if photo exists in DB
         if (!$photo) {
             $data = ['status' => 'error', 'message' => 'There is no photo with such ID'];
             $view = $this->view($data, Response::HTTP_INTERNAL_SERVER_ERROR);
@@ -119,6 +133,7 @@ class PhotoController extends FOSRestController
         $tags = explode(',', $request->get('tags'));
         foreach ($tags as $tag) {
             if (trim($tag) != '') {
+                // check if tag already exists, create new one if no
                 $dbTag = $em->getRepository('AppBundle:Tag')->findOneByName(trim($tag));
                 if (!$dbTag) {
                     $dbTag = new Tag();
@@ -128,6 +143,7 @@ class PhotoController extends FOSRestController
                 $em->persist($dbTag);
                 $em->flush();
 
+                // set tag relations with a photo
                 $tagRel = new TagRel();
                 $tagRel->setPhoto($photo);
                 $tagRel->setTag($dbTag);
@@ -143,6 +159,8 @@ class PhotoController extends FOSRestController
 
     /**
      * Delete Tags
+     * Route: /photos/id/tags
+     * Method: DELETE
      *
      * @Rest\Delete("/photos/{photoId}/tags")
      */
@@ -154,12 +172,14 @@ class PhotoController extends FOSRestController
         if ($photoId) {
             $photo = $em->getRepository('AppBundle:Photo')->findOneById($photoId);
         }
+        //check if photo exists in DB
         if (!$photo) {
             $data = ['status' => 'error', 'message' => 'There is no photo with such ID'];
             $view = $this->view($data, Response::HTTP_INTERNAL_SERVER_ERROR);
             return $view;
         }
 
+        //remove each tag
         $tags = explode(',', $request->get('tags'));
         foreach ($tags as $tag) {
             if (trim($tag) != '') {
@@ -178,6 +198,9 @@ class PhotoController extends FOSRestController
 
     /**
      * Create new or update photo
+     * Route: /photos/{id}
+     * Method: PUT
+     * Parameters: file
      *
      * @Rest\Put("/photos/{photoId}")
      */
@@ -212,6 +235,8 @@ class PhotoController extends FOSRestController
 
     /**
      * Delete Photo
+     * Route: /photo/{id}
+     * Method: DELETE
      *
      * @Rest\Delete("/photo/{photoId}")
      */
@@ -223,6 +248,7 @@ class PhotoController extends FOSRestController
         if ($photoId) {
             $photo = $em->getRepository('AppBundle:Photo')->findOneById($photoId);
         }
+        //check if photo exists in BD
         if ($photo) {
             $em->remove($photo);
             $em->flush();
