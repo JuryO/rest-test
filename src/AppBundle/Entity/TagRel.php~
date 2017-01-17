@@ -1,0 +1,38 @@
+<?php
+/**
+ * Created by PhpStorm.
+ * User: Jury
+ * Date: 16-Jan-17
+ * Time: 21:36
+ */
+
+namespace AppBundle\Entity;
+
+use Doctrine\ORM\Mapping as ORM;
+
+/**
+ * @ORM\Entity
+ * @ORM\Table(name="tagrels")
+ */
+class TagRel
+{
+    /**
+     * @ORM\Id
+     * @ORM\Column(type="integer")
+     * @ORM\GeneratedValue
+     **/
+    protected $id;
+
+    /**
+     * @ORM\ManyToOne(targetEntity="Photo", inversedBy="tagrels")
+     * @ORM\JoinColumn(name="photo_id", referencedColumnName="id")
+     */
+    protected $photo;
+
+    /**
+     * @ORM\ManyToOne(targetEntity="Tag", fetch="EAGER")
+     * @ORM\JoinColumn(name="tag_id", referencedColumnName="id")
+     **/
+    private $tag;
+
+}
